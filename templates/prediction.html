@@ -1,0 +1,232 @@
+{% extends 'base.html' %}
+{% block title %}Demand Prediction — WMSU{% endblock %}
+{% block page_title %}Demand Prediction{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div style="margin-bottom:20px">
+  <p style="color:var(--text-muted);font-size:13px;margin-top:4px">
+    <i class="fas fa-brain" style="color:var(--accent);margin-right:6px"></i>
+    Powered by Machine Learning (Linear Regression) &nbsp;·&nbsp; Generated: {{ generated_at }}
+  </p>
+</div>
+
+<!-- How It Works Banner -->
+<div style="background:var(--info-light);border:1px solid #c0cfea;border-radius:var(--radius);padding:14px 18px;margin-bottom:20px;display:flex;align-items:flex-start;gap:12px">
+  <i class="fas fa-circle-info" style="color:var(--info);margin-top:2px;font-size:16px;flex-shrink:0"></i>
+  <div style="font-size:13.5px;color:var(--info);line-height:1.6">
+    <strong>How it works:</strong> Ang sistema nag-analyze sa historical borrow data per day.
+    Gamiton ang <strong>Linear Regression</strong> para ma-predict kung pila ka books ang expected
+    ma-borrow <strong>bukas (tomorrow)</strong>. Mas daghan nga borrow history = mas accurate nga prediction.
+    Ang <strong>Low Stock Prediction</strong> nag-estimate kung kanus-a maubos ang stock base sa current demand rate.
+  </div>
+</div>
+
+<!-- SECTION 1: LOW STOCK PREDICTIONS -->
+{% if low_stock_predictions %}
+<div class="card" style="margin-bottom:20px;border-color:#f0d4a0">
+  <div class="card-header" style="margin-bottom:16px">
+    <h3 class="card-title" style="color:var(--warning)">
+      <i class="fas fa-triangle-exclamation" style="margin-right:8px"></i>
+      Low Stock Prediction
+    </h3>
+    <span style="font-size:13px;color:var(--text-muted)">{{ low_stock_predictions|length }} item(s) need attention</span>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Item</th>
+          <th>Category</th>
+          <th style="text-align:center">Current Qty</th>
+          <th style="text-align:center">Daily Demand</th>
+          <th style="text-align:center">Est. Days Left</th>
+          <th style="text-align:center">Trend</th>
+          <th style="text-align:center">Urgency</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for ls in low_stock_predictions %}
+        <tr style="animation:fadeInUp .25s ease {{ loop.index0*0.04 }}s both">
+          <td>
+            <div style="font-weight:500">{{ ls.item_name }}</div>
+            {% if ls.risk_flag %}
+            <div style="font-size:11px;color:var(--danger);margin-top:2px">
+              <i class="fas fa-fire"></i> Rising demand + low stock — restock ASAP
+            </div>
+            {% endif %}
+          </td>
+          <td>
+            <span style="background:var(--bg);border:1px solid var(--border);border-radius:20px;padding:2px 10px;font-size:12px">
+              {{ ls.category }}
+            </span>
+          </td>
+          <td style="text-align:center">
+            <strong style="font-size:16px;color:{% if ls.current_quantity==0 %}var(--danger){% elif ls.current_quantity<=3 %}var(--warning){% else %}var(--text){% endif %}">
+              {{ ls.current_quantity }}
+            </strong>
+          </td>
+          <td style="text-align:center;color:var(--text-muted);font-size:13px">~{{ ls.avg_daily_demand }}/day</td>
+          <td style="text-align:center">
+            <strong style="color:{% if ls.urgency=='Critical' %}var(--danger){% elif ls.urgency=='High' %}var(--danger){% elif ls.urgency=='Medium' %}var(--warning){% else %}var(--text-muted){% endif %}">
+              {{ ls.days_label }}
+            </strong>
+          </td>
+          <td style="text-align:center">
+            {% if ls.trend == 'Rising' %}
+              <span style="color:var(--accent2);font-size:13px;font-weight:500"><i class="fas fa-arrow-trend-up"></i> Rising</span>
+            {% elif ls.trend == 'Declining' %}
+              <span style="color:var(--danger);font-size:13px"><i class="fas fa-arrow-trend-down"></i> Declining</span>
+            {% else %}
+              <span style="color:var(--text-muted);font-size:13px"><i class="fas fa-minus"></i> Stable</span>
+            {% endif %}
+          </td>
+          <td style="text-align:center">
+            {% if ls.urgency == 'Critical' %}
+              <span class="badge badge-overdue"><i class="fas fa-ban"></i> Critical</span>
+            {% elif ls.urgency == 'High' %}
+              <span class="badge" style="background:var(--danger-light);color:var(--danger);border:1px solid #f0c0bb"><i class="fas fa-exclamation-triangle"></i> High</span>
+            {% elif ls.urgency == 'Medium' %}
+              <span class="badge" style="background:var(--warning-light);color:var(--warning);border:1px solid #f0d4a0"><i class="fas fa-exclamation"></i> Medium</span>
+            {% else %}
+              <span class="badge" style="background:var(--bg);color:var(--text-muted);border:1px solid var(--border)">Low</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="card" style="margin-bottom:20px;border-color:#b5d9d2">
+  <div style="display:flex;align-items:center;gap:12px;color:var(--accent2)">
+    <i class="fas fa-circle-check" style="font-size:22px"></i>
+    <div>
+      <div style="font-weight:600;font-size:15px">All items are well-stocked!</div>
+      <div style="font-size:13px;opacity:.8;margin-top:2px">Based on current demand, no items are predicted to run out within 14 days.</div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- SECTION 2: CATEGORY SUMMARY CARDS -->
+{% if category_summary %}
+<div style="margin-bottom:12px">
+  <h3 style="font-size:15px;font-weight:600;color:var(--text)">
+    Predicted Demand by Category
+    <span style="font-size:12px;color:var(--text-muted);font-weight:400">(tomorrow)</span>
+  </h3>
+</div>
+<div class="stats-grid" style="margin-bottom:20px">
+  {% for cat in category_summary %}
+  <div class="stat-card" style="animation-delay:{{ loop.index0 * 0.06 }}s">
+    <div class="stat-icon {% if loop.index % 4 == 1 %}amber{% elif loop.index % 4 == 2 %}green{% elif loop.index % 4 == 3 %}blue{% else %}red{% endif %}">
+      {% if 'Math' in cat.category %}<i class="fas fa-square-root-variable"></i>
+      {% elif 'Science' in cat.category %}<i class="fas fa-flask"></i>
+      {% elif 'Computer' in cat.category %}<i class="fas fa-laptop-code"></i>
+      {% elif 'Social' in cat.category %}<i class="fas fa-landmark"></i>
+      {% elif 'Health' in cat.category %}<i class="fas fa-heart-pulse"></i>
+      {% elif 'English' in cat.category %}<i class="fas fa-pen-nib"></i>
+      {% elif 'Engineer' in cat.category %}<i class="fas fa-calculator"></i>
+      {% else %}<i class="fas fa-book"></i>{% endif %}
+    </div>
+    <div>
+      <div class="stat-value">{{ cat.predicted_demand }}</div>
+      <div class="stat-label">{{ cat.category }}</div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- SECTION 3: BOOK-LEVEL DEMAND PREDICTIONS -->
+<div class="card">
+  <div class="card-header" style="margin-bottom:16px">
+    <h3 class="card-title">
+      <i class="fas fa-chart-line" style="margin-right:8px;color:var(--accent)"></i>
+      Book-Level Demand Predictions
+      <span style="font-size:12px;color:var(--text-muted);font-weight:400">(tomorrow)</span>
+    </h3>
+    <a href="{{ url_for('predictions') }}" class="btn btn-ghost btn-sm">
+      <i class="fas fa-rotate"></i> Refresh
+    </a>
+  </div>
+
+  {% if predictions %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Book Title</th>
+          <th>Category</th>
+          <th style="text-align:center">Total Borrows</th>
+          <th style="text-align:center">Avg/Day</th>
+          <th style="text-align:center">Predicted Tomorrow</th>
+          <th style="text-align:center">Trend</th>
+          <th style="text-align:center">Confidence</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in predictions %}
+        <tr style="animation:fadeInUp .25s ease {{ loop.index0*0.03 }}s both">
+          <td style="color:var(--text-muted);font-size:13px">{{ loop.index }}</td>
+          <td>
+            <div style="font-weight:500">{{ p.item_name }}</div>
+            <div style="font-size:12px;color:var(--text-muted)">{{ p.days_of_data }} day(s) of data</div>
+          </td>
+          <td>
+            <span style="background:var(--bg);border:1px solid var(--border);border-radius:20px;padding:2px 10px;font-size:12px">
+              {{ p.category }}
+            </span>
+          </td>
+          <td style="text-align:center;color:var(--text-muted)">{{ p.total_borrows }}</td>
+          <td style="text-align:center;color:var(--text-muted);font-size:13px">{{ p.avg_daily_borrows }}</td>
+          <td style="text-align:center">
+            <span style="font-size:20px;font-weight:700;font-family:'DM Serif Display',serif;color:var(--accent)">
+              {{ p.predicted_tomorrow }}
+            </span>
+          </td>
+          <td style="text-align:center">
+            {% if p.trend == 'Rising' %}
+              <span style="color:var(--accent2);font-size:13px;font-weight:500"><i class="fas fa-arrow-trend-up"></i> Rising</span>
+            {% elif p.trend == 'Declining' %}
+              <span style="color:var(--danger);font-size:13px"><i class="fas fa-arrow-trend-down"></i> Declining</span>
+            {% else %}
+              <span style="color:var(--text-muted);font-size:13px"><i class="fas fa-minus"></i> Stable</span>
+            {% endif %}
+          </td>
+          <td style="text-align:center">
+            {% if p.confidence == 'High' %}
+              <span class="badge badge-available">High</span>
+            {% elif p.confidence == 'Medium' %}
+              <span class="badge" style="background:var(--warning-light);color:var(--warning);border:1px solid #f0d4a0">Medium</span>
+            {% else %}
+              <span class="badge" style="background:var(--bg);color:var(--text-muted);border:1px solid var(--border)">Low</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <i class="fas fa-inbox"></i>
+    <p>Wala pa'y borrow history para ma-generate ang predictions.<br>
+    Mag-approve ug mga borrow requests para magsugod ang ML analysis.</p>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Legend -->
+<div style="margin-top:16px;padding:14px 18px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);font-size:12.5px;color:var(--text-muted);line-height:1.8">
+  <strong style="color:var(--text)">Legend:</strong>
+  &nbsp;<i class="fas fa-arrow-trend-up" style="color:var(--accent2)"></i> <strong>Rising</strong> — nag-increase ang demand &nbsp;|&nbsp;
+  <i class="fas fa-minus"></i> <strong>Stable</strong> — consistent ang borrow rate &nbsp;|&nbsp;
+  <i class="fas fa-arrow-trend-down" style="color:var(--danger)"></i> <strong>Declining</strong> — decreasing ang interest &nbsp;|&nbsp;
+  <strong>Confidence:</strong> High = 14+ days, Medium = 7–13 days, Low &lt;7 days &nbsp;|&nbsp;
+  <strong>Low Stock Urgency:</strong> Critical = out of stock, High = ≤3 days, Medium = ≤7 days, Low = ≤14 days
+</div>
+{% endblock %}

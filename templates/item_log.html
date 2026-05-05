@@ -1,0 +1,93 @@
+{% extends 'base.html' %}
+{% block title %}Item Log — {{ item.item_name }}{% endblock %}
+{% block page_title %}Item Log{% endblock %}
+
+{% block content %}
+<!-- Item Header -->
+<div class="card" style="margin-bottom:20px">
+  <div style="display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap">
+    <div style="width:52px;height:52px;background:var(--accent-light);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;color:var(--accent);flex-shrink:0">
+      <i class="fas fa-book"></i>
+    </div>
+    <div style="flex:1">
+      <div style="font-family:'DM Serif Display',serif;font-size:20px;margin-bottom:2px">{{ item.item_name }}</div>
+      <div style="color:var(--text-muted);font-size:13px;margin-bottom:8px">{{ item.description or 'No description' }}</div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;font-size:13px">
+        <span><i class="fas fa-tag" style="color:var(--accent);margin-right:4px"></i>{{ item.category }}</span>
+        <span><i class="fas fa-layer-group" style="color:var(--accent);margin-right:4px"></i>Current Qty: <strong>{{ item.quantity }}</strong></span>
+        <span class="badge {% if item.status=='Available' %}badge-available{% elif item.status=='Low Stock' %}badge-low{% else %}badge-out{% endif %}">{{ item.status }}</span>
+      </div>
+    </div>
+    <div style="text-align:right;font-size:12px;color:var(--text-muted);min-width:160px">
+      <div><i class="fas fa-calendar-plus" style="margin-right:4px"></i>Added: <strong>{{ item.created_at[:10] }}</strong></div>
+      <div style="margin-top:4px"><i class="fas fa-user" style="margin-right:4px"></i>By: <strong>{{ item.added_by_name or 'System' }}</strong></div>
+      <div style="margin-top:4px"><i class="fas fa-boxes-stacked" style="margin-right:4px"></i>Initial Stock: <strong>{{ item.initial_quantity or '—' }}</strong></div>
+    </div>
+  </div>
+  <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">
+    <a href="{{ url_for('items') }}" class="btn btn-ghost btn-sm"><i class="fas fa-arrow-left"></i> Back to Inventory</a>
+  </div>
+</div>
+
+<!-- Log Table -->
+<div class="card">
+  <div class="card-header">
+    <h3 class="card-title"><i class="fas fa-history" style="margin-right:8px;color:var(--accent)"></i>Activity Log</h3>
+    <span style="font-size:13px;color:var(--text-muted)">{{ logs|length }} record(s)</span>
+  </div>
+  {% if logs %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Date & Time</th>
+          <th>Action</th>
+          <th>Qty Change</th>
+          <th>Qty After</th>
+          <th>Done By</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for log in logs %}
+        <tr style="animation:fadeInUp .25s ease {{ loop.index0 * 0.04 }}s both">
+          <td style="color:var(--text-muted);font-size:13px;white-space:nowrap">{{ log.created_at[:16] }}</td>
+          <td>
+            {% if log.action == 'Added' %}
+              <span class="badge badge-available"><i class="fas fa-plus"></i> {{ log.action }}</span>
+            {% elif log.action == 'Edited' %}
+              <span class="badge badge-approved" style="background:var(--info-light);color:var(--info);border:1px solid #c0cfea"><i class="fas fa-pen"></i> {{ log.action }}</span>
+            {% elif log.action == 'Borrowed' %}
+              <span class="badge badge-pending"><i class="fas fa-hand-holding"></i> {{ log.action }}</span>
+            {% elif log.action == 'Returned' %}
+              <span class="badge badge-returned"><i class="fas fa-rotate-left"></i> {{ log.action }}</span>
+            {% else %}
+              <span class="badge">{{ log.action }}</span>
+            {% endif %}
+          </td>
+          <td style="font-weight:600;color:{% if log.quantity_change > 0 %}var(--accent2){% elif log.quantity_change < 0 %}var(--danger){% else %}var(--text-muted){% endif %}">
+            {% if log.quantity_change > 0 %}+{{ log.quantity_change }}{% elif log.quantity_change == 0 %}—{% else %}{{ log.quantity_change }}{% endif %}
+          </td>
+          <td style="font-weight:500">{{ log.quantity_after }}</td>
+          <td>
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="width:28px;height:28px;border-radius:50%;background:var(--accent-light);color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0">
+                {{ (log.done_by_name or 'S')[0].upper() }}
+              </div>
+              <span style="font-size:13px">{{ log.done_by_name or 'System' }}</span>
+            </div>
+          </td>
+          <td style="color:var(--text-muted);font-size:13px">{{ log.notes or '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <i class="fas fa-history"></i>
+    <p>No activity log yet for this item.</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
