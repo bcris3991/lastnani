@@ -10,8 +10,8 @@ from ml_predictor import predict_demand, get_category_summary, predict_low_stock
 app = Flask(__name__)
 app.secret_key = 'wmsu_inventory_secret_key_2024'
 DATABASE = os.path.join(app.instance_path, 'wmsu_inventory.db')
-with app.app_context():
-    init_db()
+
+# ─── FIX: makedirs BEFORE init_db so the instance folder exists first ─────────
 os.makedirs(app.instance_path, exist_ok=True)
 
 # ─── DB HELPERS ───────────────────────────────────────────────────────────────
@@ -122,6 +122,10 @@ def init_db():
                 db.commit()
             except Exception:
                 pass
+
+# ─── FIX: init_db is now defined above, so this call is safe ──────────────────
+with app.app_context():
+    init_db()
 
 # ─── AUTH DECORATORS ──────────────────────────────────────────────────────────
 
