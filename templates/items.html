@@ -97,9 +97,6 @@
           </button>
         {% endif %}
       {% elif session.role in ['Staff', 'Admin'] %}
-        <button class="btn btn-ghost btn-sm" onclick="openEditModal({{ item.item_id }}, '{{ item.item_name|replace("'","\\'") }}', '{{ item.description|replace("'","\\'")|default("") }}', '{{ item.category }}', {{ item.quantity }}, '{{ item.status }}')">
-          <i class="fas fa-pen"></i> Edit
-        </button>
         <a href="{{ url_for('item_log', item_id=item.item_id) }}" class="btn btn-ghost btn-sm">
           <i class="fas fa-history"></i> Log
         </a>
