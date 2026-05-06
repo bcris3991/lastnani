@@ -143,6 +143,9 @@ def role_required(*roles):
         def decorated(*args, **kwargs):
             if session.get('role') not in roles:
                 flash('Access denied.', 'error')
+                # Students go to items, others go to dashboard
+                if session.get('role') == 'Student':
+                    return redirect(url_for('items'))
                 return redirect(url_for('dashboard'))
             return f(*args, **kwargs)
         return decorated
@@ -153,6 +156,9 @@ def role_required(*roles):
 @app.route('/')
 def index():
     if 'user_id' in session:
+        # Students go directly to books/items
+        if session.get('role') == 'Student':
+            return redirect(url_for('items'))
         return redirect(url_for('dashboard'))
     return redirect(url_for('login'))
 
@@ -168,6 +174,9 @@ def login():
             session['name'] = user['name']
             session['role'] = user['role']
             session['email'] = user['email']
+            # Students go directly to books/items page, others go to dashboard
+            if user['role'] == 'Student':
+                return redirect(url_for('items'))
             return redirect(url_for('dashboard'))
         flash('Invalid email or password.', 'error')
     return render_template('login.html')
@@ -212,6 +221,11 @@ def logout():
 def dashboard():
     db = get_db()
     role = session['role']
+
+    # Students have no dashboard — redirect them to items
+    if role == 'Student':
+        return redirect(url_for('items'))
+
     stats = {}
     if role == 'Admin':
         stats['total_users'] = db.execute("SELECT COUNT(*) as c FROM users").fetchone()['c']
@@ -231,15 +245,7 @@ def dashboard():
             FROM borrow_requests br JOIN users u ON br.user_id=u.id JOIN items i ON br.item_id=i.item_id
             WHERE br.status='Pending' ORDER BY br.created_at DESC LIMIT 5""").fetchall()
         stats['recent'] = recent
-    else:  # Student
-        uid = session['user_id']
-        stats['my_borrows'] = db.execute("SELECT COUNT(*) as c FROM borrow_requests WHERE user_id=? AND status='Approved'", (uid,)).fetchone()['c']
-        stats['pending'] = db.execute("SELECT COUNT(*) as c FROM borrow_requests WHERE user_id=? AND status='Pending'", (uid,)).fetchone()['c']
-        stats['returned'] = db.execute("SELECT COUNT(*) as c FROM borrow_requests WHERE user_id=? AND status='Returned'", (uid,)).fetchone()['c']
-        recent = db.execute("""SELECT br.*, i.item_name FROM borrow_requests br
-            JOIN items i ON br.item_id=i.item_id WHERE br.user_id=?
-            ORDER BY br.created_at DESC LIMIT 5""", (uid,)).fetchall()
-        stats['recent'] = recent
+
     notifs = db.execute("SELECT COUNT(*) as c FROM notifications WHERE user_id=? AND is_read=0", (session['user_id'],)).fetchone()['c']
     return render_template('dashboard.html', stats=stats, notif_count=notifs, today=date.today().isoformat())
 
