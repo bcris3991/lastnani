@@ -690,12 +690,29 @@ select.form-control { cursor: pointer; }
     </div>
     <nav class="sidebar-nav">
       <span class="nav-section-label">Main</span>
+
+      {# ── Dashboard: hidden for Student ── #}
+      {% if session.role != 'Student' %}
       <a href="{{ url_for('dashboard') }}" class="nav-item {% if request.endpoint=='dashboard' %}active{% endif %}">
         <i class="nav-icon fas fa-gauge-high"></i> Dashboard
       </a>
+      {% endif %}
 
-      {# ── Students & Staff can see Inventory and Borrow Requests ── #}
-      {% if session.role in ['Student', 'Staff'] %}
+      {# ── Student: Books + Borrow Requests only ── #}
+      {% if session.role == 'Student' %}
+      <a href="{{ url_for('items') }}" class="nav-item {% if request.endpoint=='items' %}active{% endif %}">
+        <i class="nav-icon fas fa-book"></i> Books
+      </a>
+      <a href="{{ url_for('borrow_requests') }}" class="nav-item {% if request.endpoint=='borrow_requests' %}active{% endif %}">
+        <i class="nav-icon fas fa-right-left"></i> Borrow Requests
+        {% if notif_count %}
+          <span class="nav-badge">{{ notif_count }}</span>
+        {% endif %}
+      </a>
+      {% endif %}
+
+      {# ── Staff: Inventory + Borrow Requests ── #}
+      {% if session.role == 'Staff' %}
       <a href="{{ url_for('items') }}" class="nav-item {% if request.endpoint=='items' %}active{% endif %}">
         <i class="nav-icon fas fa-box-archive"></i> Inventory
       </a>
